@@ -1,14 +1,24 @@
 
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
+<GridLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="25px"
+    android:minHeight="25px"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:id="@+id/gridLayout1">
     <Button
         android:text="Send Intent"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:minWidth="25px"
         android:minHeight="25px"
-        android:id="@+id/sendIntent" />
-</RelativeLayout>
+        android:id="@+id/sendIntent"/>
+    <android.support.v7.widget.SwitchCompat
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/activateKaffee"
+        android:layout_below="@id/sendIntent"
+        android:autoText="true"
+        android:checked="true"
+        android:buttonTint="#ffc82525" />
+</GridLayout>
