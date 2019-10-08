@@ -15,6 +15,7 @@ namespace MeineApp
         Uri _url;
         Activity activity = new Activity();
         bool activated = true;
+        PowerManager.WakeLock wlo;
         public MyAlarmManager() { }
         public MyAlarmManager(HttpClient client, Uri url)
         {
@@ -31,6 +32,10 @@ namespace MeineApp
             {
                 return;
             }
+            PowerManager pm = (PowerManager)context.GetSystemService(Context.PowerService);
+            PowerManager.WakeLock wl = pm.NewWakeLock(WakeLockFlags.Partial, "");
+            wlo = wl;
+            wlo.Acquire(5000);
 
             PendingResult pendingResult = GoAsync();
             new Thread(async () =>
@@ -38,13 +43,15 @@ namespace MeineApp
                 try
                 {
                     string reqResultAsync = await _client.GetStringAsync(_url);
-                    
+
                     activity.RunOnUiThread(() =>
                     {
                         Toast.MakeText(context, "Kaffee" + reqResultAsync, ToastLength.Long).Show();
 
                     });
                     pendingResult.Finish();
+                    taskEnd();
+
                 }
                 catch (System.Exception ex)
                 {
@@ -54,9 +61,16 @@ namespace MeineApp
                         Toast.MakeText(context, errorMessage, ToastLength.Long).Show(); // For example
                     });
                     pendingResult.Finish();
-                
+                    taskEnd();
+
                 }
             }).Start();
+            
         }
+        private void taskEnd()
+        {
+            wlo.Release();
+        }
+
     }
 }
