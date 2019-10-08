@@ -4,16 +4,24 @@ using Android.Widget;
 using System.Net.Http;
 using Android.App;
 using Java.Lang;
+using Android.OS;
 
 namespace MeineApp
 {
     [BroadcastReceiver]
     class MyAlarmManager : BroadcastReceiver
     {
-        HttpClient client = new HttpClient();
-        Uri url = new Uri("http://kaffeewecker/toggleled");
+        HttpClient _client;
+        Uri _url;
         Activity activity = new Activity();
-        bool activated = false;
+        bool activated = true;
+        public MyAlarmManager() { }
+        public MyAlarmManager(HttpClient client, Uri url)
+        {
+            this._client = client;
+            this._url = url;
+
+        }
 
         public bool Activated { get => activated; set => activated = value; }
 
@@ -23,26 +31,30 @@ namespace MeineApp
             {
                 return;
             }
-            //Toast.MakeText(context, "http://192.168.178.55/toggleled", ToastLength.Short).Show();
+
             PendingResult pendingResult = GoAsync();
             new Thread(async () =>
             {
                 try
-                { var reqResultAsync = await client.GetStringAsync(url);
-                    string checkResult = reqResultAsync.ToString();
+                {
+                    string reqResultAsync = await _client.GetStringAsync(_url);
+                    
                     activity.RunOnUiThread(() =>
                     {
-                        Toast.MakeText(context, "Kaffee" + checkResult, ToastLength.Long).Show();
+                        Toast.MakeText(context, "Kaffee" + reqResultAsync, ToastLength.Long).Show();
 
                     });
-
-                    //client.Dispose();
                     pendingResult.Finish();
                 }
                 catch (System.Exception ex)
                 {
-                    string checkResult = "Error " + ex.ToString();
-                    client.Dispose();
+                    string errorMessage = "Error " + ex.ToString();
+                    activity.RunOnUiThread(() =>
+                    {
+                        Toast.MakeText(context, errorMessage, ToastLength.Long).Show(); // For example
+                    });
+                    pendingResult.Finish();
+                
                 }
             }).Start();
         }

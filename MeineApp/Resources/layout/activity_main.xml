@@ -1,24 +1,48 @@
 
-<GridLayout
+<RelativeLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="25px"
     android:minHeight="25px"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:id="@+id/gridLayout1">
-    <Button
-        android:text="Send Intent"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+    android:id="@+id/relativeLayout1">
+    <GridLayout
         android:minWidth="25px"
         android:minHeight="25px"
-        android:id="@+id/sendIntent"/>
-    <android.support.v7.widget.SwitchCompat
-        android:layout_width="wrap_content"
+        android:columnCount="2"
+        android:rowCount="2"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:id="@+id/activateKaffee"
-        android:layout_below="@id/sendIntent"
-        android:autoText="true"
-        android:checked="true"
-        android:buttonTint="#ffc82525" />
-</GridLayout>
+        android:id="@+id/gridLayout1">
+        <EditText
+            android:layout_columnWeight="15"
+            android:layout_rowWeight="1"
+            android:inputType="time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/kaffeTime"
+            android:focusableInTouchMode="false"/>
+        <android.support.v7.widget.SwitchCompat
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:text="Activated:"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/activateKaffee"
+            android:layout_toRightOf="@id/kaffeTime"
+            android:autoText="true"
+            android:checked="true"/>
+        <Button
+            android:layout_marginRight="300px"
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:text="Send Intent"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="25px"
+            android:minHeight="25px"
+            android:id="@+id/sendIntent"
+            android:layout_below="@id/kaffeTime"/>
+    </GridLayout>
+
+</RelativeLayout>
