@@ -10,12 +10,12 @@
         android:minWidth="25px"
         android:minHeight="25px"
         android:columnCount="2"
-        android:rowCount="2"
+        android:rowCount="3"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:id="@+id/gridLayout1">
         <EditText
-            android:layout_columnWeight="15"
+            android:layout_columnWeight="1"
             android:layout_rowWeight="1"
             android:inputType="time"
             android:layout_width="wrap_content"
@@ -33,7 +33,6 @@
             android:autoText="true"
             android:checked="true"/>
         <Button
-            android:layout_marginRight="300px"
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
             android:text="Send Intent"
@@ -43,6 +42,32 @@
             android:minHeight="25px"
             android:id="@+id/sendIntent"
             android:layout_below="@id/kaffeTime"/>
+        <TextView
+            android:text=""
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:id="@+id/textView1" />
+        <Button
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:text="Kaffemaschine"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="25px"
+            android:minHeight="25px"
+            android:id="@+id/kaffeToggle"
+            android:layout_below="@id/sendIntent"/>
+        <Button
+            android:layout_columnWeight="1"
+            android:layout_rowWeight="1"
+            android:text="Licht"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="25px"
+            android:minHeight="25px"
+            android:id="@+id/lichtToggle"
+            android:layout_below="@id/textView1"/>
     </GridLayout>
 
 </RelativeLayout>

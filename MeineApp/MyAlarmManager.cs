@@ -5,6 +5,7 @@ using System.Net.Http;
 using Android.App;
 using Java.Lang;
 using Android.OS;
+using Xamarin.Forms;
 
 namespace MeineApp
 {
@@ -13,10 +14,10 @@ namespace MeineApp
     {
         HttpClient _client;
         Uri _url;
-        Activity activity = new Activity();
         bool activated = true;
         PowerManager.WakeLock wlo;
         public MyAlarmManager() { }
+        Activity activity = new Activity();
         public MyAlarmManager(HttpClient client, Uri url)
         {
             this._client = client;
@@ -25,6 +26,7 @@ namespace MeineApp
         }
 
         public bool Activated { get => activated; set => activated = value; }
+
 
         public override void OnReceive(Context context, Intent intent)
         {
@@ -46,9 +48,21 @@ namespace MeineApp
 
                     activity.RunOnUiThread(() =>
                     {
-                        Toast.MakeText(context, "Kaffee" + reqResultAsync, ToastLength.Long).Show();
+                        Toast.MakeText(context, reqResultAsync, ToastLength.Long).Show();
 
                     });
+                    switch (reqResultAsync.Substring(0, System.Math.Min(6, reqResultAsync.Length)))
+                    {
+                        case "Kaffee":
+                            MessagingCenter.Send<MyAlarmManager, string>(this, "kaffeetoggle", reqResultAsync);
+                            break;
+                        case "Licht":
+                            MessagingCenter.Send<MyAlarmManager, string>(this, "lichttoggle", reqResultAsync);
+                            break;
+
+                        default:
+                            break;
+                    }
                     pendingResult.Finish();
                     taskEnd();
 
@@ -65,12 +79,12 @@ namespace MeineApp
 
                 }
             }).Start();
-            
+
+
         }
         private void taskEnd()
         {
             wlo.Release();
         }
-
     }
 }
