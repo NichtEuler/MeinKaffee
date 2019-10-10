@@ -5,25 +5,24 @@ using Android.Runtime;
 using Android.Support.V7.App;
 using Android.Support.V7.Widget;
 using Android.Widget;
-using Java.Lang;
 using System;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Button = Android.Widget.Button;
+using Java.Lang;
 
 namespace MeineApp
 {
-    [Activity(Label = "MeinKaffee", Theme = "@style/AppTheme", MainLauncher = true)]
+    [Activity(Icon = "@drawable/icon", Label = "@string/app_name", Theme = "@style/AppTheme", MainLauncher = true)]
     public class MainActivity : AppCompatActivity
     {
         MyAlarmManager kaffeeManager;
         SwitchCompat actvKaffee;
-        Button weckerTest;
         Button kaffeeToggle;
         Button lichtToggle;
         EditText kaffeeTime;
         HttpClient client;
         Uri url;
+
         protected override void OnCreate(Bundle savedInstanceState)
         {
             base.OnCreate(savedInstanceState);
@@ -31,8 +30,8 @@ namespace MeineApp
             // Set our view from the "main" layout resource
             SetContentView(Resource.Layout.activity_main);
             client = new HttpClient();
-            client.Timeout = new System.TimeSpan(0, 0, 4);
-            url = new Uri("http://kaffeewecker/kaffeetoggle");
+            client.Timeout = new TimeSpan(0, 0, 4);
+            url = new Uri("http://kaffeewecker/lichttoggle");
             kaffeeManager = new MyAlarmManager(client, url);
 
             InititalizeButtons();
@@ -54,7 +53,7 @@ namespace MeineApp
             kaffeeToggle.Text = await SendInstruction(uri);
         }
 
-        private void KaffeeTime_Click(object sender, System.EventArgs e)
+        private void KaffeeTime_Click(object sender, EventArgs e)
         {
             TimePickerFragment frag = TimePickerFragment.NewInstance(
                 delegate (DateTime time)
@@ -65,22 +64,19 @@ namespace MeineApp
 
         }
 
-        private void ActvKaffee_Click(object sender, System.EventArgs e)
+        private void ActvKaffee_Click(object sender, EventArgs e)
         {
             kaffeeManager.Activated = actvKaffee.Checked;
         }
 
-        private async void Button_Click(object sender, System.EventArgs e)
-        {
-
-            Toast.MakeText(this, "Sending Intent", ToastLength.Short).Show();
-            Uri uri = new Uri("http://kaffeewecker/toggleled");
-            await SendInstruction(uri);
-            AlarmManager alarmManager = (AlarmManager)GetSystemService(AlarmService);
-            Intent myIntent = new Intent("testitest");
-            PendingIntent pendingIntent = PendingIntent.GetBroadcast(this, 0, myIntent, 0);
-            alarmManager.Set(AlarmType.RtcWakeup, JavaSystem.CurrentTimeMillis(), pendingIntent);
-        }
+        //private async void Button_Click(object sender, System.EventArgs e)
+        //{
+        //    Toast.MakeText(this, "Sending Intent", ToastLength.Short).Show();
+        //    AlarmManager alarmManager = (AlarmManager)GetSystemService(AlarmService);
+        //    Intent myIntent = new Intent("testitest");
+        //    PendingIntent pendingIntent = PendingIntent.GetBroadcast(this, 0, myIntent, 0);
+        //    alarmManager.Set(AlarmType.RtcWakeup, JavaSystem.CurrentTimeMillis() + (50 * 1000), pendingIntent);
+        //}
 
         private async Task<string> SendInstruction(Uri uri)
         {
@@ -114,9 +110,6 @@ namespace MeineApp
             actvKaffee.Click += ActvKaffee_Click;
             actvKaffee.Checked = kaffeeManager.Activated;
 
-            weckerTest = FindViewById<Button>(Resource.Id.sendIntent);
-            weckerTest.Click += Button_Click;
-
             kaffeeTime = FindViewById<EditText>(Resource.Id.kaffeTime);
             kaffeeTime.Click += KaffeeTime_Click;
             //kaffeeTime.SetOnKeyListener(null);
@@ -129,9 +122,9 @@ namespace MeineApp
         }
         private void InitializeAlarm()
         {
-            RegisterReceiver(kaffeeManager, new IntentFilter("com.urbandroid.sleep.alarmclock.ALARM_ALERT_START_AUTO"));
-            MyAlarmManager myAlarm = new MyAlarmManager(client, new Uri("http://kaffeewecker/kaffeetoggle"));
-            RegisterReceiver(myAlarm, new IntentFilter("testitest"));
+            RegisterReceiver(kaffeeManager, new IntentFilter("com.urbandroid.sleep.alarmclock.ALARM_ALERT_START_AUTO"), ActivityFlags.ReceiverForeground);
+            //MyAlarmManager myAlarm = new MyAlarmManager(client, new Uri("http://kaffeewecker/lichttoggle"));
+            //RegisterReceiver(myAlarm, new IntentFilter("testitest"));
 
         }
 
@@ -151,7 +144,7 @@ namespace MeineApp
                     lichtToggle.Text = e;
                 });
             });
-        } 
+        }
         #endregion
 
         public override void OnRequestPermissionsResult(int requestCode, string[] permissions, [GeneratedEnum] Android.Content.PM.Permission[] grantResults)

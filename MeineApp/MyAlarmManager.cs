@@ -2,6 +2,7 @@
 using Android.Content;
 using Android.Widget;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using Android.App;
 using Java.Lang;
 using Android.OS;
@@ -18,16 +19,16 @@ namespace MeineApp
         PowerManager.WakeLock wlo;
         public MyAlarmManager() { }
         Activity activity = new Activity();
+            
         public MyAlarmManager(HttpClient client, Uri url)
         {
             this._client = client;
             this._url = url;
-
         }
 
         public bool Activated { get => activated; set => activated = value; }
 
-
+        
         public override void OnReceive(Context context, Intent intent)
         {
             if (!activated)
@@ -35,7 +36,7 @@ namespace MeineApp
                 return;
             }
             PowerManager pm = (PowerManager)context.GetSystemService(Context.PowerService);
-            PowerManager.WakeLock wl = pm.NewWakeLock(WakeLockFlags.Partial, "");
+            PowerManager.WakeLock wl = pm.NewWakeLock(WakeLockFlags.Full, "");
             wlo = wl;
             wlo.Acquire(5000);
 
@@ -51,9 +52,9 @@ namespace MeineApp
                         Toast.MakeText(context, reqResultAsync, ToastLength.Long).Show();
 
                     });
-                    switch (reqResultAsync.Substring(0, System.Math.Min(6, reqResultAsync.Length)))
+                    switch (reqResultAsync.Substring(0, System.Math.Min(5, reqResultAsync.Length)))
                     {
-                        case "Kaffee":
+                        case "Kaffe":
                             MessagingCenter.Send<MyAlarmManager, string>(this, "kaffeetoggle", reqResultAsync);
                             break;
                         case "Licht":

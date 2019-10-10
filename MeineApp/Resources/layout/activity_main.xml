@@ -32,7 +32,7 @@
             android:layout_toRightOf="@id/kaffeTime"
             android:autoText="true"
             android:checked="true"/>
-        <Button
+        <!--<Button
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
             android:text="Send Intent"
@@ -47,7 +47,7 @@
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
             android:textAppearance="?android:attr/textAppearanceMedium"
-            android:id="@+id/textView1" />
+            android:id="@+id/textView1" />-->
         <Button
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
@@ -57,7 +57,7 @@
             android:minWidth="25px"
             android:minHeight="25px"
             android:id="@+id/kaffeToggle"
-            android:layout_below="@id/sendIntent"/>
+            android:layout_below="@id/kaffeTime"/>
         <Button
             android:layout_columnWeight="1"
             android:layout_rowWeight="1"
@@ -67,7 +67,17 @@
             android:minWidth="25px"
             android:minHeight="25px"
             android:id="@+id/lichtToggle"
-            android:layout_below="@id/textView1"/>
+            android:layout_below="@id/activateKaffee"/>
+        <Button
+          android:layout_columnWeight="1"
+          android:layout_rowWeight="1"
+          android:text="TestJob"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:minWidth="25px"
+          android:minHeight="25px"
+          android:id="@+id/testButton"
+          android:layout_below="@id/kaffeToggle"/>
     </GridLayout>
 
 </RelativeLayout>
