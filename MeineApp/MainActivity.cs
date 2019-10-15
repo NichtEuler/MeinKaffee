@@ -10,6 +10,7 @@ using System.Net.Http;
 using System.Net.Mqtt;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
+using Android.App.Job;
 using Java.Lang;
 using Xamarin.Essentials;
 
@@ -26,8 +27,10 @@ namespace MeineApp
         private EditText kaffeeTime;
         private HttpClient client;
         private Uri url;
-        private IMqttClient mqttClient;
         private SessionState sessionState;
+        private MyService myService;
+
+        public IMqttClient mqttClient;
 
         protected override void OnCreate(Bundle savedInstanceState)
         {
@@ -44,11 +47,43 @@ namespace MeineApp
             InititalizeButtons();
             InitializeMQTT();
             InitializeAlarm();
-            //InititalizeSubscriptions();
+        }
+
+        private void InititalizeService()
+        {
+            try
+            {
+                JobScheduler jobScheduler = (JobScheduler)GetSystemService(Context.JobSchedulerService);
+                JobInfo.Builder builder = new JobInfo.Builder(1, new ComponentName(this, Java.Lang.Class.FromType(typeof(MyService))));
+                builder.SetPersisted(false);
+                builder.SetRequiredNetworkType(NetworkType.Any);
+
+                PersistableBundle bundle = new PersistableBundle();
+                bundle.PutString("kaffee", "ON");
+                builder.SetExtras(bundle);
+
+                jobScheduler.Schedule(builder.Build());
+
+                builder = new JobInfo.Builder(2, new ComponentName(this, Java.Lang.Class.FromType(typeof(MyService))));
+                builder.SetRequiredNetworkType(NetworkType.Any);
+                builder.SetMinimumLatency(1000 * 10);
+
+                bundle = new PersistableBundle();
+                bundle.PutString("kaffee", "OFF");
+                builder.SetExtras(bundle);
+
+                jobScheduler.Schedule(builder.Build());
+            }
+            catch (System.Exception ex)
+            {
+
+                throw ex;
+            }
         }
 
         private void Connectivity_ConnectivityChanged(object sender, ConnectivityChangedEventArgs e)
         {
+            mqttClient.Dispose();
             InitializeMQTT();
         }
 
@@ -113,8 +148,16 @@ namespace MeineApp
 
         private string ByteArrayToString(byte[] arr)
         {
-            System.Text.ASCIIEncoding enc = new System.Text.ASCIIEncoding();
-            return enc.GetString(arr);
+            try
+            {
+                System.Text.ASCIIEncoding enc = new System.Text.ASCIIEncoding();
+                return enc.GetString(arr);
+            }
+            catch (System.Exception)
+            {
+
+                return null;
+            }
         }
 
         private async Task<string> SendInstruction(Uri uri)
@@ -165,17 +208,25 @@ namespace MeineApp
 
         private async void InitializeMQTT()
         {
-            var configuration = new MqttConfiguration
+            try
             {
-                Port = 31395,
-                KeepAliveSecs = 10,
-                WaitTimeoutSecs = 2,
-                MaximumQualityOfService = MqttQualityOfService.AtMostOnce,
-                AllowWildcardsInTopicFilters = true
-            };
-            mqttClient = await MqttClient.CreateAsync("piist3.feste-ip.net", configuration);
-            sessionState = await mqttClient.ConnectAsync(new MqttClientCredentials(clientId: "foo"), cleanSession: true);
-            InititalizeSubscriptions();
+                var configuration = new MqttConfiguration
+                {
+                    Port = 31395,
+                    KeepAliveSecs = 10,
+                    WaitTimeoutSecs = 2,
+                    MaximumQualityOfService = MqttQualityOfService.ExactlyOnce,
+                    AllowWildcardsInTopicFilters = true
+                };
+                mqttClient = await MqttClient.CreateAsync("piist3.feste-ip.net", configuration);
+                sessionState = await mqttClient.ConnectAsync(new MqttClientCredentials(clientId: "foo"), cleanSession: true);
+                InititalizeSubscriptions();
+            }
+            catch (System.Exception ex)
+            {
+
+                throw ex;
+            }
         }
 
 
@@ -190,10 +241,10 @@ namespace MeineApp
         private async void InititalizeSubscriptions()
         {
             await mqttClient.SubscribeAsync("/home/lights/kitchen", MqttQualityOfService.AtMostOnce);
-            await mqttClient.SubscribeAsync("/home/lights/kitchen1", MqttQualityOfService.AtMostOnce);
+            await mqttClient.SubscribeAsync("home/lights/kitchen1", MqttQualityOfService.AtMostOnce);
 
             mqttClient.MessageStream.Where(msg => msg.Topic == "/home/lights/kitchen").Subscribe(kitchen);
-            mqttClient.MessageStream.Where(msg => msg.Topic == "/home/lights/kitchen1").Subscribe(kitchen1);
+            mqttClient.MessageStream.Where(msg => msg.Topic == "home/lights/kitchen1").Subscribe(kitchen1);
 
             Xamarin.Forms.MessagingCenter.Subscribe<MyAlarmManager, string>(this, "kaffeetoggle", (sender, e) =>
             {
@@ -219,6 +270,8 @@ namespace MeineApp
             {
                 kaffeeToggle.Text = "Kaffeemaschine :" + ByteArrayToString(obj.Payload);
             });
+            InititalizeService();
+
         }
 
         private void kitchen(MqttApplicationMessage obj)
@@ -229,7 +282,6 @@ namespace MeineApp
             });
             this.RunOnUiThread(() => Toast.MakeText(this, obj.Topic, ToastLength.Long).Show());
         }
-
 
         public override void OnRequestPermissionsResult(int requestCode, string[] permissions, [GeneratedEnum] Android.Content.PM.Permission[] grantResults)
         {

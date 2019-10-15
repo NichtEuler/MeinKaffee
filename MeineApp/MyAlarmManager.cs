@@ -47,11 +47,7 @@ namespace MeineApp
                 {
                     string reqResultAsync = await _client.GetStringAsync(_url);
 
-                    activity.RunOnUiThread(() =>
-                    {
-                        Toast.MakeText(context, reqResultAsync, ToastLength.Long).Show();
-
-                    });
+                    activity.RunOnUiThread(() => { Toast.MakeText(context, reqResultAsync, ToastLength.Long).Show(); });
                     switch (reqResultAsync.Substring(0, System.Math.Min(5, reqResultAsync.Length)))
                     {
                         case "Kaffe":
@@ -64,9 +60,9 @@ namespace MeineApp
                         default:
                             break;
                     }
+
                     pendingResult.Finish();
                     taskEnd();
-
                 }
                 catch (System.Exception ex)
                 {
@@ -77,7 +73,6 @@ namespace MeineApp
                     });
                     pendingResult.Finish();
                     taskEnd();
-
                 }
             }).Start();
 
