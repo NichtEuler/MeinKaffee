@@ -41,7 +41,7 @@ namespace MeineApp
             client = new HttpClient();
             client.Timeout = new TimeSpan(0, 0, 4);
             url = new Uri("http://kaffeewecker/lichttoggle");
-            kaffeeManager = new MyAlarmManager(client, url);
+            kaffeeManager = new MyAlarmManager();
             Connectivity.ConnectivityChanged += Connectivity_ConnectivityChanged;
 
             InititalizeButtons();
@@ -93,15 +93,18 @@ namespace MeineApp
 
         private async void LichtToggle_Click(object sender, EventArgs e)
         {
-            Uri uri = new Uri("http://kaffeewecker/lichttoggle");
-            lichtToggle.Text = await SendInstruction(uri);
+            //Uri uri = new Uri("http://kaffeewecker/lichttoggle");
+            //lichtToggle.Text = await SendInstruction(uri);
+            MqttApplicationMessage message = new MqttApplicationMessage("home/kitchen/lights", StringToByteArray("toggle"));
+
+            await mqttClient.PublishAsync(message, MqttQualityOfService.AtLeastOnce, false);
 
         }
 
         private async void KaffeeToggle_Click(object sender, EventArgs e)
         {
-            Uri uri = new Uri("http://kaffeewecker/kaffeetoggle");
-            kaffeeToggle.Text = await SendInstruction(uri);
+            //Uri uri = new Uri("http://kaffeewecker/kaffeetoggle");
+            //kaffeeToggle.Text = await SendInstruction(uri);
         }
 
         private void KaffeeTime_Click(object sender, EventArgs e)
@@ -135,7 +138,7 @@ namespace MeineApp
 
                 MqttApplicationMessage message = new MqttApplicationMessage("home/garden/fountain", StringToByteArray("Hallo Vom Handy"));
 
-                await mqttClient.PublishAsync(message, MqttQualityOfService.AtLeastOnce, true);
+                await mqttClient.PublishAsync(message, MqttQualityOfService.AtLeastOnce, false);
             }
             catch (System.Exception ex)
             {
@@ -164,30 +167,30 @@ namespace MeineApp
             }
         }
 
-        private async Task<string> SendInstruction(Uri uri)
-        {
-            string reqResultAsync = null;
-            try
-            {
-                reqResultAsync = await Task.Run(() => client.GetStringAsync(uri));
+        //private async Task<string> SendInstruction(Uri uri)
+        //{
+        //    string reqResultAsync = null;
+        //    try
+        //    {
+        //        reqResultAsync = await Task.Run(() => client.GetStringAsync(uri));
 
-                this.RunOnUiThread(() =>
-                {
-                    Toast.MakeText(this, reqResultAsync, ToastLength.Long).Show();
+        //        this.RunOnUiThread(() =>
+        //        {
+        //            Toast.MakeText(this, reqResultAsync, ToastLength.Long).Show();
 
-                });
-                return reqResultAsync;
-            }
-            catch (System.Exception)
-            {
-                string error = "Error";
-                this.RunOnUiThread(() =>
-                {
-                    Toast.MakeText(this, error, ToastLength.Long).Show();
-                });
-                return error;
-            }
-        }
+        //        });
+        //        return reqResultAsync;
+        //    }
+        //    catch (System.Exception)
+        //    {
+        //        string error = "Error";
+        //        this.RunOnUiThread(() =>
+        //        {
+        //            Toast.MakeText(this, error, ToastLength.Long).Show();
+        //        });
+        //        return error;
+        //    }
+        //}
 
         #region Initialization
         private void InititalizeButtons()

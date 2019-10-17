@@ -13,18 +13,9 @@ namespace MeineApp
     [BroadcastReceiver]
     class MyAlarmManager : BroadcastReceiver
     {
-        HttpClient _client;
-        Uri _url;
         bool activated = true;
         PowerManager.WakeLock wlo;
-        public MyAlarmManager() { }
         Activity activity = new Activity();
-            
-        public MyAlarmManager(HttpClient client, Uri url)
-        {
-            this._client = client;
-            this._url = url;
-        }
 
         public bool Activated { get => activated; set => activated = value; }
 
@@ -45,22 +36,7 @@ namespace MeineApp
             {
                 try
                 {
-                    string reqResultAsync = await _client.GetStringAsync(_url);
-
-                    activity.RunOnUiThread(() => { Toast.MakeText(context, reqResultAsync, ToastLength.Long).Show(); });
-                    switch (reqResultAsync.Substring(0, System.Math.Min(5, reqResultAsync.Length)))
-                    {
-                        case "Kaffe":
-                            MessagingCenter.Send<MyAlarmManager, string>(this, "kaffeetoggle", reqResultAsync);
-                            break;
-                        case "Licht":
-                            MessagingCenter.Send<MyAlarmManager, string>(this, "lichttoggle", reqResultAsync);
-                            break;
-
-                        default:
-                            break;
-                    }
-
+                    
                     pendingResult.Finish();
                     taskEnd();
                 }
