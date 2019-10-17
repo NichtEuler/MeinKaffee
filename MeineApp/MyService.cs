@@ -17,6 +17,7 @@ namespace MeineApp
         {
             Log.Debug(TAG, "Job started");
             InitializeMqtt(@params);
+            JobFinished(@params, false);
             return false;
         }
 
@@ -48,19 +49,21 @@ namespace MeineApp
                 };
                 mqttClient = await MqttClient.CreateAsync("piist3.feste-ip.net", configuration);
                 await mqttClient.ConnectAsync(new MqttClientCredentials(clientId: "WeckerService"), cleanSession: true);
+
                 MqttApplicationMessage message =
-                    new MqttApplicationMessage("home/kitchen/kaffee", StringToByteArray(@params.Extras.GetString("kaffee", "OFF")));
+                            new MqttApplicationMessage(@params.Extras.GetString("path"), StringToByteArray(@params.Extras.GetString("value", "OFF")));
                 await mqttClient.PublishAsync(message, MqttQualityOfService.AtMostOnce, true);
+
                 mqttClient.DisconnectAsync();
 
             }
-            catch (System.Exception ex)
+            catch (System.Exception)
             {
-
-                throw ex;
+                mqttClient.Dispose();
+                JobFinished(@params, true);
             }
         }
 
-       
+
     }
 }

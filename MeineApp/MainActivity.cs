@@ -53,32 +53,36 @@ namespace MeineApp
         {
             try
             {
-                JobScheduler jobScheduler = (JobScheduler)GetSystemService(Context.JobSchedulerService);
-                JobInfo.Builder builder = new JobInfo.Builder(1, new ComponentName(this, Java.Lang.Class.FromType(typeof(MyService))));
-                builder.SetPersisted(false);
-                builder.SetRequiredNetworkType(NetworkType.Any);
-
-                PersistableBundle bundle = new PersistableBundle();
-                bundle.PutString("kaffee", "ON");
-                builder.SetExtras(bundle);
-
-                jobScheduler.Schedule(builder.Build());
-
-                builder = new JobInfo.Builder(2, new ComponentName(this, Java.Lang.Class.FromType(typeof(MyService))));
-                builder.SetRequiredNetworkType(NetworkType.Any);
-                builder.SetMinimumLatency(1000 * 10);
-
-                bundle = new PersistableBundle();
-                bundle.PutString("kaffee", "OFF");
-                builder.SetExtras(bundle);
-
-                jobScheduler.Schedule(builder.Build());
+                JobBuilder("home/kitchen/kaffee", "ON");
+                JobBuilder("home/kitchen/lights", "ON");
+                JobBuilder("home/kitchen/kaffee", "OFF", 5);
             }
             catch (System.Exception ex)
             {
 
                 throw ex;
             }
+        }
+
+        private void JobBuilder(string path, string value, int scheduleInMinutes = 0)
+        {
+            JobScheduler jobScheduler = (JobScheduler)GetSystemService(Context.JobSchedulerService);
+            JobInfo.Builder builder =
+                new JobInfo.Builder(1, new ComponentName(this, Java.Lang.Class.FromType(typeof(MyService))));
+
+
+            PersistableBundle bundle = new PersistableBundle();
+            bundle.PutString("path", path);
+            bundle.PutString("value", value);
+            builder.SetPersisted(false);
+            builder.SetRequiredNetworkType(NetworkType.Any);
+            builder.SetExtras(bundle);
+            if (scheduleInMinutes != 0)
+            {
+                builder.SetMinimumLatency(scheduleInMinutes * 1000 * 60);
+            }
+
+            jobScheduler.Schedule(builder.Build());
         }
 
         private void Connectivity_ConnectivityChanged(object sender, ConnectivityChangedEventArgs e)
@@ -240,11 +244,9 @@ namespace MeineApp
 
         private async void InititalizeSubscriptions()
         {
-            await mqttClient.SubscribeAsync("/home/lights/kitchen", MqttQualityOfService.AtMostOnce);
-            await mqttClient.SubscribeAsync("home/lights/kitchen1", MqttQualityOfService.AtMostOnce);
+            await mqttClient.SubscribeAsync("home/lights/kitchen", MqttQualityOfService.AtMostOnce);
 
-            mqttClient.MessageStream.Where(msg => msg.Topic == "/home/lights/kitchen").Subscribe(kitchen);
-            mqttClient.MessageStream.Where(msg => msg.Topic == "home/lights/kitchen1").Subscribe(kitchen1);
+            mqttClient.MessageStream.Where(msg => msg.Topic == "home/lights/kitchen").Subscribe(kitchen);
 
             Xamarin.Forms.MessagingCenter.Subscribe<MyAlarmManager, string>(this, "kaffeetoggle", (sender, e) =>
             {
@@ -264,7 +266,7 @@ namespace MeineApp
         #endregion
 
 
-        private void kitchen1(MqttApplicationMessage obj)
+        private void kitchen(MqttApplicationMessage obj)
         {
             this.RunOnUiThread(() =>
             {
@@ -272,15 +274,6 @@ namespace MeineApp
             });
             InititalizeService();
 
-        }
-
-        private void kitchen(MqttApplicationMessage obj)
-        {
-            this.RunOnUiThread(() =>
-            {
-                kaffeeToggle.Text = "Eyyyy";
-            });
-            this.RunOnUiThread(() => Toast.MakeText(this, obj.Topic, ToastLength.Long).Show());
         }
 
         public override void OnRequestPermissionsResult(int requestCode, string[] permissions, [GeneratedEnum] Android.Content.PM.Permission[] grantResults)
