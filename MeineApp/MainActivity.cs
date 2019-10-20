@@ -105,6 +105,9 @@ namespace MeineApp
         {
             //Uri uri = new Uri("http://kaffeewecker/kaffeetoggle");
             //kaffeeToggle.Text = await SendInstruction(uri);
+            MqttApplicationMessage message = new MqttApplicationMessage("home/kitchen/kaffee", StringToByteArray("toggle"));
+
+            await mqttClient.PublishAsync(message, MqttQualityOfService.AtLeastOnce, false);
         }
 
         private void KaffeeTime_Click(object sender, EventArgs e)
@@ -226,7 +229,7 @@ namespace MeineApp
                     AllowWildcardsInTopicFilters = true
                 };
                 mqttClient = await MqttClient.CreateAsync("piist3.feste-ip.net", configuration);
-                sessionState = await mqttClient.ConnectAsync(new MqttClientCredentials(clientId: "foo"), cleanSession: true);
+                sessionState = await mqttClient.ConnectAsync(new MqttClientCredentials(Guid.NewGuid().ToString("N")), cleanSession: true);
                 InititalizeSubscriptions();
             }
             catch (System.Exception ex)
@@ -247,35 +250,34 @@ namespace MeineApp
 
         private async void InititalizeSubscriptions()
         {
-            await mqttClient.SubscribeAsync("home/lights/kitchen", MqttQualityOfService.AtMostOnce);
+            mqttClient.MessageStream.Where(msg => msg.Topic == "home/kitchen/lights").Subscribe(kitchenLightReceived);
+            mqttClient.MessageStream.Where(msg => msg.Topic == "home/kitchen/kaffee").Subscribe(kaffeeReceived);
 
-            mqttClient.MessageStream.Where(msg => msg.Topic == "home/lights/kitchen").Subscribe(kitchen);
+            await mqttClient.SubscribeAsync("home/kitchen/lights", MqttQualityOfService.AtMostOnce);
+            await mqttClient.SubscribeAsync("home/kitchen/kaffee", MqttQualityOfService.AtMostOnce);
 
-            Xamarin.Forms.MessagingCenter.Subscribe<MyAlarmManager, string>(this, "kaffeetoggle", (sender, e) =>
+
+        }
+
+        private void kaffeeReceived(MqttApplicationMessage obj)
+        {
+            string value = ByteArrayToString(obj.Payload);
+            if (!value.Equals("toggle"))
             {
-                this.RunOnUiThread(() =>
-                {
-                    kaffeeToggle.Text = e;
-                });
-            });
-            Xamarin.Forms.MessagingCenter.Subscribe<MyAlarmManager, string>(this, "lichttoggle", (sender, e) =>
-            {
-                this.RunOnUiThread(() =>
-                {
-                    lichtToggle.Text = e;
-                });
-            });
+                this.RunOnUiThread(() => { kaffeeToggle.Text = "Kaffeemaschine: " + value; });
+            }
+
         }
         #endregion
 
 
-        private void kitchen(MqttApplicationMessage obj)
+        private void kitchenLightReceived(MqttApplicationMessage obj)
         {
-            this.RunOnUiThread(() =>
+            string value = ByteArrayToString(obj.Payload);
+            if (!value.Equals("toggle"))
             {
-                kaffeeToggle.Text = "Kaffeemaschine :" + ByteArrayToString(obj.Payload);
-            });
-            InititalizeService();
+                this.RunOnUiThread(() => { lichtToggle.Text = "Licht: " + value; });
+            }
 
         }
 
