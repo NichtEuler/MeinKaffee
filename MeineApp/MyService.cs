@@ -1,4 +1,5 @@
-﻿using Android.App;
+﻿using System;
+using Android.App;
 using Android.App.Job;
 using Android.Util;
 using System.Net.Mqtt;
@@ -22,17 +23,7 @@ namespace MeineApp
         }
 
 
-        private byte[] StringToByteArray(string str)
-        {
-            System.Text.ASCIIEncoding enc = new System.Text.ASCIIEncoding();
-            return enc.GetBytes(str);
-        }
-
-        public override bool OnStopJob(JobParameters @params)
-        {
-            Log.Debug(TAG, "Job cancelled");
-            return true;
-        }
+     
 
 
         private async void InitializeMqtt(JobParameters @params)
@@ -48,13 +39,13 @@ namespace MeineApp
                     AllowWildcardsInTopicFilters = true
                 };
                 mqttClient = await MqttClient.CreateAsync("piist3.feste-ip.net", configuration);
-                await mqttClient.ConnectAsync(new MqttClientCredentials(clientId: "WeckerService"), cleanSession: true);
+                await mqttClient.ConnectAsync(new MqttClientCredentials(Guid.NewGuid().ToString("N")), cleanSession: true);
 
                 MqttApplicationMessage message =
                             new MqttApplicationMessage(@params.Extras.GetString("path"), StringToByteArray(@params.Extras.GetString("value", "OFF")));
-                await mqttClient.PublishAsync(message, MqttQualityOfService.AtMostOnce, true);
+                await mqttClient.PublishAsync(message, MqttQualityOfService.AtLeastOnce, true);
 
-                mqttClient.DisconnectAsync();
+                await mqttClient.DisconnectAsync();
 
             }
             catch (System.Exception)
@@ -63,7 +54,16 @@ namespace MeineApp
                 JobFinished(@params, true);
             }
         }
+        private byte[] StringToByteArray(string str)
+        {
+            System.Text.ASCIIEncoding enc = new System.Text.ASCIIEncoding();
+            return enc.GetBytes(str);
+        }
 
-
+        public override bool OnStopJob(JobParameters @params)
+        {
+            Log.Debug(TAG, "Job cancelled");
+            return true;
+        }
     }
 }

@@ -6,9 +6,11 @@ using Android.Support.V7.App;
 using Android.Support.V7.Widget;
 using Android.Widget;
 using System;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Mqtt;
 using System.Reactive.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Android.App.Job;
 using Java.Lang;
@@ -29,8 +31,10 @@ namespace MeineApp
         private Uri url;
         private SessionState sessionState;
         private MyService myService;
-
+        private LogUtils myLogger;
         public IMqttClient mqttClient;
+
+        static SemaphoreSlim semaphoreSlim = new SemaphoreSlim(1, 1);
 
         protected override void OnCreate(Bundle savedInstanceState)
         {
@@ -38,87 +42,104 @@ namespace MeineApp
             Xamarin.Essentials.Platform.Init(this, savedInstanceState);
             // Set our view from the "main" layout resource
             SetContentView(Resource.Layout.activity_main);
-            client = new HttpClient();
-            client.Timeout = new TimeSpan(0, 0, 4);
-            url = new Uri("http://kaffeewecker/lichttoggle");
+            myLogger = new LogUtils();
             kaffeeManager = new MyAlarmManager();
             Connectivity.ConnectivityChanged += Connectivity_ConnectivityChanged;
 
+
             InititalizeButtons();
-            InitializeMQTT();
             InitializeAlarm();
         }
 
-        private void InititalizeService()
+
+
+        //private void MqttClient_Disconnected(object sender, MqttEndpointDisconnected e)
+        //{
+        //    myLogger.Log("Client disconnected, retrying");
+        //    InitializeMQTT();
+        //}
+
+        //also works with clients disconnect handler
+        protected override void OnResume()
         {
+            myLogger.Log("Resuming app");
+            base.OnResume();
             try
             {
-                JobBuilder("home/kitchen/kaffee", "ON");
-                JobBuilder("home/kitchen/lights", "ON");
-                JobBuilder("home/kitchen/kaffee", "OFF", 5);
+                if (mqttClient == null)
+                {
+                    myLogger.Log("Client not connected");
+                    InitializeMQTT();
+                }
+                else if (!mqttClient.IsConnected)
+                {
+
+                    myLogger.Log("Client reconnecting");
+                    mqttConnect();
+                }
             }
             catch (System.Exception ex)
             {
-
-                throw ex;
+                myLogger.Log(ex.Message);
             }
         }
 
-        private void JobBuilder(string path, string value, int scheduleInMinutes = 0)
-        {
-            JobScheduler jobScheduler = (JobScheduler)GetSystemService(Context.JobSchedulerService);
-            JobInfo.Builder builder =
-                new JobInfo.Builder(1, new ComponentName(this, Java.Lang.Class.FromType(typeof(MyService))));
-
-
-            PersistableBundle bundle = new PersistableBundle();
-            bundle.PutString("path", path);
-            bundle.PutString("value", value);
-            builder.SetPersisted(false);
-            builder.SetRequiredNetworkType(NetworkType.Any);
-            builder.SetExtras(bundle);
-            if (scheduleInMinutes != 0)
-            {
-                builder.SetMinimumLatency(scheduleInMinutes * 1000 * 60);
-            }
-
-            jobScheduler.Schedule(builder.Build());
-        }
 
         private void Connectivity_ConnectivityChanged(object sender, ConnectivityChangedEventArgs e)
         {
-            mqttClient.Dispose();
-            InitializeMQTT();
+            myLogger.Log("Connectivity changed");
+            if (!mqttClient.IsConnected)
+            {
+                mqttClient.DisconnectAsync();
+                myLogger.Log("Connection to MQTT lost, reconnecting");
+                mqttConnect();
+            }
         }
 
         private async void LichtToggle_Click(object sender, EventArgs e)
         {
-            //Uri uri = new Uri("http://kaffeewecker/lichttoggle");
-            //lichtToggle.Text = await SendInstruction(uri);
-            MqttApplicationMessage message = new MqttApplicationMessage("home/kitchen/lights", StringToByteArray("toggle"));
+            try
+            {
+                MqttApplicationMessage message = new MqttApplicationMessage("home/kitchen/lights", StringToByteArray("toggle"));
 
-            await mqttClient.PublishAsync(message, MqttQualityOfService.AtLeastOnce, false);
+                await mqttClient.PublishAsync(message, MqttQualityOfService.AtLeastOnce, false);
+            }
+            catch (System.Exception ex)
+            {
+                myLogger.Log(ex.Message);
+            }
 
         }
 
         private async void KaffeeToggle_Click(object sender, EventArgs e)
         {
-            //Uri uri = new Uri("http://kaffeewecker/kaffeetoggle");
-            //kaffeeToggle.Text = await SendInstruction(uri);
-            MqttApplicationMessage message = new MqttApplicationMessage("home/kitchen/kaffee", StringToByteArray("toggle"));
-
-            await mqttClient.PublishAsync(message, MqttQualityOfService.AtLeastOnce, false);
+            try
+            {
+                MqttApplicationMessage message = new MqttApplicationMessage("home/kitchen/kaffee", StringToByteArray("toggle"));
+                await mqttClient.PublishAsync(message, MqttQualityOfService.AtLeastOnce, false);
+            }
+            catch (System.Exception ex)
+            {
+                myLogger.Log(ex.Message);
+            }
         }
 
         private void KaffeeTime_Click(object sender, EventArgs e)
         {
-            TimePickerFragment frag = TimePickerFragment.NewInstance(
-                delegate (DateTime time)
-                {
-                    kaffeeTime.Text = time.ToString("HH:mm");
-                });
-            frag.Show(this.FragmentManager, TimePickerFragment.TAG);
+            try
+            {
+                TimePickerFragment frag = TimePickerFragment.NewInstance(
+                        delegate (DateTime time)
+                        {
+                            kaffeeTime.Text = time.ToString("HH:mm");
+                        });
+                frag.Show(this.FragmentManager, TimePickerFragment.TAG);
 
+            }
+            catch (System.Exception ex)
+            {
+                myLogger.Log(ex.Message);
+            }
         }
 
         private void ActvKaffee_Click(object sender, EventArgs e)
@@ -126,34 +147,38 @@ namespace MeineApp
             kaffeeManager.Activated = actvKaffee.Checked;
         }
 
-        //private async void Button_Click(object sender, System.EventArgs e)
-        //{
-        //    Toast.MakeText(this, "Sending Intent", ToastLength.Short).Show();
-        //    AlarmManager alarmManager = (AlarmManager)GetSystemService(AlarmService);
-        //    Intent myIntent = new Intent("testitest");
-        //    PendingIntent pendingIntent = PendingIntent.GetBroadcast(this, 0, myIntent, 0);
-        //    alarmManager.Set(AlarmType.RtcWakeup, JavaSystem.CurrentTimeMillis() + (50 * 1000), pendingIntent);
-        //}
+
         private async void TestButton_Click(object sender, EventArgs e)
         {
             try
             {
 
                 MqttApplicationMessage message = new MqttApplicationMessage("home/garden/fountain", StringToByteArray("Hallo Vom Handy"));
-
                 await mqttClient.PublishAsync(message, MqttQualityOfService.AtLeastOnce, false);
+
+                AlarmManager alarmManager = (AlarmManager) GetSystemService(AlarmService);
+                Intent myIntent = new Intent("com.urbandroid.sleep.alarmclock.ALARM_ALERT_START_AUTO");
+                PendingIntent pendingIntent = PendingIntent.GetBroadcast(this, 0, myIntent, 0);
+                alarmManager.Set(AlarmType.RtcWakeup, JavaSystem.CurrentTimeMillis(), pendingIntent);
             }
             catch (System.Exception ex)
             {
-
-                throw ex;
+                myLogger.Log(ex.Message);
             }
         }
 
         private byte[] StringToByteArray(string str)
         {
-            System.Text.ASCIIEncoding enc = new System.Text.ASCIIEncoding();
-            return enc.GetBytes(str);
+            try
+            {
+                System.Text.ASCIIEncoding enc = new System.Text.ASCIIEncoding();
+                return enc.GetBytes(str);
+            }
+            catch (System.Exception ex)
+            {
+                myLogger.Log(ex.Message);
+                return null;
+            }
         }
 
         private string ByteArrayToString(byte[] arr)
@@ -163,37 +188,13 @@ namespace MeineApp
                 System.Text.ASCIIEncoding enc = new System.Text.ASCIIEncoding();
                 return enc.GetString(arr);
             }
-            catch (System.Exception)
+            catch (System.Exception ex)
             {
-
+                myLogger.Log(ex.Message);
                 return null;
             }
         }
 
-        //private async Task<string> SendInstruction(Uri uri)
-        //{
-        //    string reqResultAsync = null;
-        //    try
-        //    {
-        //        reqResultAsync = await Task.Run(() => client.GetStringAsync(uri));
-
-        //        this.RunOnUiThread(() =>
-        //        {
-        //            Toast.MakeText(this, reqResultAsync, ToastLength.Long).Show();
-
-        //        });
-        //        return reqResultAsync;
-        //    }
-        //    catch (System.Exception)
-        //    {
-        //        string error = "Error";
-        //        this.RunOnUiThread(() =>
-        //        {
-        //            Toast.MakeText(this, error, ToastLength.Long).Show();
-        //        });
-        //        return error;
-        //    }
-        //}
 
         #region Initialization
         private void InititalizeButtons()
@@ -214,10 +215,13 @@ namespace MeineApp
 
             testButton = FindViewById<Button>(Resource.Id.testButton);
             testButton.Click += TestButton_Click;
+
+            myLogger.Log("Buttons Initialized");
         }
 
         private async void InitializeMQTT()
         {
+            await semaphoreSlim.WaitAsync();
             try
             {
                 var configuration = new MqttConfiguration
@@ -229,42 +233,71 @@ namespace MeineApp
                     AllowWildcardsInTopicFilters = true
                 };
                 mqttClient = await MqttClient.CreateAsync("piist3.feste-ip.net", configuration);
-                sessionState = await mqttClient.ConnectAsync(new MqttClientCredentials(Guid.NewGuid().ToString("N")), cleanSession: true);
+                await mqttConnect();
+
                 InititalizeSubscriptions();
             }
             catch (System.Exception ex)
             {
-
-                throw ex;
+                myLogger.Log(ex.Message);
             }
+            finally
+            {
+                semaphoreSlim.Release();
+            }
+        }
+
+        private async Task mqttConnect()
+        {
+            MqttLastWill lastWill = new MqttLastWill("home/kitchen/lights", MqttQualityOfService.AtLeastOnce, true,
+                StringToByteArray("OFF"));
+            sessionState = await mqttClient.ConnectAsync(new MqttClientCredentials(Guid.NewGuid().ToString("N")), lastWill,
+                cleanSession: true);
+            myLogger.Log("Session created, Sessionstate: " + sessionState.ToString());
         }
 
 
         private void InitializeAlarm()
         {
             RegisterReceiver(kaffeeManager, new IntentFilter("com.urbandroid.sleep.alarmclock.ALARM_ALERT_START_AUTO"), ActivityFlags.ReceiverForeground);
-            //MyAlarmManager myAlarm = new MyAlarmManager(client, new Uri("http://kaffeewecker/lichttoggle"));
-            //RegisterReceiver(myAlarm, new IntentFilter("testitest"));
-
         }
 
         private async void InititalizeSubscriptions()
         {
-            mqttClient.MessageStream.Where(msg => msg.Topic == "home/kitchen/lights").Subscribe(kitchenLightReceived);
-            mqttClient.MessageStream.Where(msg => msg.Topic == "home/kitchen/kaffee").Subscribe(kaffeeReceived);
+            try
+            {
+                mqttClient.MessageStream.Where(msg => msg.Topic == "home/kitchen/lights").Subscribe(kitchenLightReceived);
+                mqttClient.MessageStream.Where(msg => msg.Topic == "home/kitchen/kaffee").Subscribe(kaffeeReceived);
 
-            await mqttClient.SubscribeAsync("home/kitchen/lights", MqttQualityOfService.AtMostOnce);
-            await mqttClient.SubscribeAsync("home/kitchen/kaffee", MqttQualityOfService.AtMostOnce);
+                await mqttClient.SubscribeAsync("home/kitchen/lights", MqttQualityOfService.AtMostOnce);
+                await mqttClient.SubscribeAsync("home/kitchen/kaffee", MqttQualityOfService.AtMostOnce);
 
+            }
+            catch (System.Exception ex)
+            {
+
+                myLogger.Log(ex.Message);
+                throw ex;
+            }
 
         }
 
         private void kaffeeReceived(MqttApplicationMessage obj)
         {
-            string value = ByteArrayToString(obj.Payload);
-            if (!value.Equals("toggle"))
+            try
             {
-                this.RunOnUiThread(() => { kaffeeToggle.Text = "Kaffeemaschine: " + value; });
+                string value = ByteArrayToString(obj.Payload);
+
+                if (!value.Equals("toggle"))
+                {
+                    this.RunOnUiThread(() => { kaffeeToggle.Text = "Kaffeemaschine: " + value; });
+                }
+            }
+            catch (System.Exception ex)
+            {
+                myLogger.Log(ex.Message);
+
+                throw ex;
             }
 
         }
@@ -273,17 +306,24 @@ namespace MeineApp
 
         private void kitchenLightReceived(MqttApplicationMessage obj)
         {
-            string value = ByteArrayToString(obj.Payload);
-            if (!value.Equals("toggle"))
+            try
             {
-                this.RunOnUiThread(() => { lichtToggle.Text = "Licht: " + value; });
-            }
+                string value = ByteArrayToString(obj.Payload);
+                if (!value.Equals("toggle"))
+                {
+                    this.RunOnUiThread(() => { lichtToggle.Text = "Licht: " + value; });
+                }
 
+            }
+            catch (System.Exception ex)
+            {
+                myLogger.Log(ex.Message);
+            }
         }
 
         public override void OnRequestPermissionsResult(int requestCode, string[] permissions, [GeneratedEnum] Android.Content.PM.Permission[] grantResults)
         {
-            Xamarin.Essentials.Platform.OnRequestPermissionsResult(requestCode, permissions, grantResults);
+            Platform.OnRequestPermissionsResult(requestCode, permissions, grantResults);
 
             base.OnRequestPermissionsResult(requestCode, permissions, grantResults);
         }
