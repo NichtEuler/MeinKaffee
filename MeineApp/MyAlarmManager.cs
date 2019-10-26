@@ -15,10 +15,18 @@ namespace MeineApp
     class MyAlarmManager : BroadcastReceiver
     {
         bool activated = true;
-        //PowerManager.WakeLock wlo;
+        PowerManager.WakeLock wlo;
         Activity activity = new Activity();
         private Context _context;
         private int i = 1;
+        private LogUtils myLog;
+        private static string TAG = "MyAlarmManager";
+
+        public MyAlarmManager()
+        {
+            myLog = new LogUtils(true);
+        }
+
 
         public bool Activated { get => activated; set => activated = value; }
 
@@ -30,22 +38,23 @@ namespace MeineApp
             {
                 return;
             }
-            //PowerManager pm = (PowerManager)context.GetSystemService(Context.PowerService);
-            //PowerManager.WakeLock wl = pm.NewWakeLock(WakeLockFlags.Full, "");
-            //wlo = wl;
-            //wlo.Acquire(5000);
+            PowerManager pm = (PowerManager)context.GetSystemService(Context.PowerService);
+            PowerManager.WakeLock wl = pm.NewWakeLock(WakeLockFlags.Full, "");
+            wlo = wl;
+            wlo.Acquire(5000);
             try
             {
                 JobBuilder("home/kitchen/kaffee", "ON");
                 JobBuilder("home/kitchen/lights", "ON");
                 JobBuilder("home/kitchen/kaffee", "OFF", 5);
+                myLog.Log(TAG + "Services created");
             }
             catch (System.Exception ex)
             {
-
+                myLog.Log(TAG + ex.Message);
                 throw ex;
             }
-            //wlo.Release();
+            wlo.Release();
         }
 
 

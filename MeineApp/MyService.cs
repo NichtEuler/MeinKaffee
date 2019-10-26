@@ -12,10 +12,13 @@ namespace MeineApp
         private static string TAG = "MyService";
         private MainActivity activity;
         private IMqttClient mqttClient;
+        private LogUtils myLog;
 
 
         public override bool OnStartJob(JobParameters @params)
         {
+            myLog = new LogUtils(true);
+            myLog.Log(TAG + "Job started");
             Log.Debug(TAG, "Job started");
             InitializeMqtt(@params);
             JobFinished(@params, false);
@@ -48,8 +51,9 @@ namespace MeineApp
                 await mqttClient.DisconnectAsync();
 
             }
-            catch (System.Exception)
+            catch (System.Exception ex)
             {
+                myLog.Log(TAG + ex.Message);
                 mqttClient.Dispose();
                 JobFinished(@params, true);
             }
@@ -62,6 +66,7 @@ namespace MeineApp
 
         public override bool OnStopJob(JobParameters @params)
         {
+            myLog.Log(TAG + "Job cancelled");
             Log.Debug(TAG, "Job cancelled");
             return true;
         }

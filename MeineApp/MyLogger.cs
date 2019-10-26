@@ -5,13 +5,13 @@ namespace MeineApp
     {
         String logFilePath = null;
 
-        public LogUtils()
+        public LogUtils(bool append)
         {
             String path = Android.OS.Environment.ExternalStorageDirectory.Path;
             logFilePath = System.IO.Path.Combine(path, "MeineApp.log.txt");
             if (System.IO.File.Exists(logFilePath))
             {
-                using (System.IO.StreamWriter writer = new System.IO.StreamWriter(logFilePath, false))
+                using (System.IO.StreamWriter writer = new System.IO.StreamWriter(logFilePath, append))
                 {
                     writer.WriteLine("Starting logging at " + DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"));
                 }

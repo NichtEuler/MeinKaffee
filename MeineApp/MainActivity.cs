@@ -18,7 +18,7 @@ using Xamarin.Essentials;
 
 namespace MeineApp
 {
-    [Activity(Icon = "@drawable/icon", Label = "@string/app_name", Theme = "@style/AppTheme", MainLauncher = true)]
+    [Activity(Icon = "@drawable/icon", Label = "MeinKaffee", Theme = "@style/AppTheme", MainLauncher = true)]
     public class MainActivity : AppCompatActivity
     {
         private MyAlarmManager kaffeeManager;
@@ -42,10 +42,9 @@ namespace MeineApp
             Xamarin.Essentials.Platform.Init(this, savedInstanceState);
             // Set our view from the "main" layout resource
             SetContentView(Resource.Layout.activity_main);
-            myLogger = new LogUtils();
+            myLogger = new LogUtils(false);
             kaffeeManager = new MyAlarmManager();
             Connectivity.ConnectivityChanged += Connectivity_ConnectivityChanged;
-
 
             InititalizeButtons();
             InitializeAlarm();
@@ -82,6 +81,12 @@ namespace MeineApp
             {
                 myLogger.Log(ex.Message);
             }
+        }
+
+        protected override void OnPause()
+        {
+            base.OnPause();
+            mqttClient.DisconnectAsync();
         }
 
 
@@ -156,7 +161,7 @@ namespace MeineApp
                 MqttApplicationMessage message = new MqttApplicationMessage("home/garden/fountain", StringToByteArray("Hallo Vom Handy"));
                 await mqttClient.PublishAsync(message, MqttQualityOfService.AtLeastOnce, false);
 
-                AlarmManager alarmManager = (AlarmManager) GetSystemService(AlarmService);
+                AlarmManager alarmManager = (AlarmManager)GetSystemService(AlarmService);
                 Intent myIntent = new Intent("com.urbandroid.sleep.alarmclock.ALARM_ALERT_START_AUTO");
                 PendingIntent pendingIntent = PendingIntent.GetBroadcast(this, 0, myIntent, 0);
                 alarmManager.Set(AlarmType.RtcWakeup, JavaSystem.CurrentTimeMillis(), pendingIntent);
@@ -249,11 +254,17 @@ namespace MeineApp
 
         private async Task mqttConnect()
         {
-            MqttLastWill lastWill = new MqttLastWill("home/kitchen/lights", MqttQualityOfService.AtLeastOnce, true,
-                StringToByteArray("OFF"));
-            sessionState = await mqttClient.ConnectAsync(new MqttClientCredentials(Guid.NewGuid().ToString("N")), lastWill,
-                cleanSession: true);
-            myLogger.Log("Session created, Sessionstate: " + sessionState.ToString());
+            try
+            {
+                MqttLastWill lastWill = new MqttLastWill("home/kitchen/lights", MqttQualityOfService.AtLeastOnce, true, StringToByteArray("OFF"));
+                sessionState = await mqttClient.ConnectAsync(new MqttClientCredentials(Guid.NewGuid().ToString("N")), lastWill, cleanSession: true);
+                myLogger.Log("Session created, Sessionstate: " + sessionState.ToString());
+                InititalizeSubscriptions();
+            }
+            catch (System.Exception ex)
+            {
+                myLogger.Log("mqttConnect: " + ex.Message);
+            }
         }
 
 
@@ -271,6 +282,7 @@ namespace MeineApp
 
                 await mqttClient.SubscribeAsync("home/kitchen/lights", MqttQualityOfService.AtMostOnce);
                 await mqttClient.SubscribeAsync("home/kitchen/kaffee", MqttQualityOfService.AtMostOnce);
+                myLogger.Log("Subscriptions Initialized");
 
             }
             catch (System.Exception ex)
@@ -299,7 +311,6 @@ namespace MeineApp
 
                 throw ex;
             }
-
         }
         #endregion
 
